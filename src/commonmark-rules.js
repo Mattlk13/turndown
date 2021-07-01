@@ -109,7 +109,7 @@ rules.fencedCodeBlock = {
   },
 
   replacement: function (content, node, options) {
-    var className = node.firstChild.className || ''
+    var className = node.firstChild.getAttribute('class') || ''
     var language = (className.match(/language-(\S+)/) || [null, ''])[1]
     var code = node.firstChild.textContent
 
@@ -153,7 +153,8 @@ rules.inlineLink = {
 
   replacement: function (content, node) {
     var href = node.getAttribute('href')
-    var title = node.title ? ' "' + node.title + '"' : ''
+    var title = cleanAttribute(node.getAttribute('title'))
+    if (title) title = ' "' + title + '"'
     return '[' + content + '](' + href + title + ')'
   }
 }
@@ -169,7 +170,8 @@ rules.referenceLink = {
 
   replacement: function (content, node, options) {
     var href = node.getAttribute('href')
-    var title = node.title ? ' "' + node.title + '"' : ''
+    var title = cleanAttribute(node.getAttribute('title'))
+    if (title) title = ' "' + title + '"'
     var replacement
     var reference
 
@@ -231,19 +233,15 @@ rules.code = {
   },
 
   replacement: function (content) {
-    if (!content.trim()) return ''
+    if (!content) return ''
+    content = content.replace(/\r?\n|\r/g, ' ')
 
+    var extraSpace = /^`|^ .*?[^ ].* $|`$/.test(content) ? ' ' : ''
     var delimiter = '`'
-    var leadingSpace = ''
-    var trailingSpace = ''
-    var matches = content.match(/`+/gm)
-    if (matches) {
-      if (/^`/.test(content)) leadingSpace = ' '
-      if (/`$/.test(content)) trailingSpace = ' '
-      while (matches.indexOf(delimiter) !== -1) delimiter = delimiter + '`'
-    }
+    var matches = content.match(/`+/gm) || []
+    while (matches.indexOf(delimiter) !== -1) delimiter = delimiter + '`'
 
-    return delimiter + leadingSpace + content + trailingSpace + delimiter
+    return delimiter + extraSpace + content + extraSpace + delimiter
   }
 }
 
@@ -251,12 +249,16 @@ rules.image = {
   filter: 'img',
 
   replacement: function (content, node) {
-    var alt = node.alt || ''
+    var alt = cleanAttribute(node.getAttribute('alt'))
     var src = node.getAttribute('src') || ''
-    var title = node.title || ''
+    var title = cleanAttribute(node.getAttribute('title'))
     var titlePart = title ? ' "' + title + '"' : ''
     return src ? '![' + alt + ']' + '(' + src + titlePart + ')' : ''
   }
+}
+
+function cleanAttribute (attribute) {
+  return attribute ? attribute.replace(/(\n+\s*)+/g, '\n') : ''
 }
 
 export default rules
